@@ -51,6 +51,10 @@ function SelectiveLeaveModal(props: { modalProps: any }) {
     const { onClose } = props.modalProps;
     const meId = UserStore.getCurrentUser()?.id;
 
+    // Fixed modal width so the window size doesn't change between tabs
+    // Keeps a consistent width while remaining responsive to viewport size
+    const FIXED_MODAL_WIDTH = "min(840px, calc(100vw - 64px))";
+
     // Data
     const allGuilds = React.useMemo(() => {
         const map = GuildStore.getGuilds?.() ?? {};
@@ -145,6 +149,10 @@ function SelectiveLeaveModal(props: { modalProps: any }) {
 .ssl-toolbar button:hover { box-shadow: 0 0 12px rgba(88,101,242,.35); }
 .ssl-toolbar button:active { transform: translateY(1px) scale(.99); }
 
+/* Tabs equal width */
+.ssl-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.ssl-tab { width: 100%; justify-content: center; }
+
 /* Search input focus glow */
 .ssl-search input { box-shadow: 0 0 0 0 rgba(0,0,0,0); transition: box-shadow .2s ease, border-color .2s ease; color: var(--header-primary); -webkit-text-fill-color: var(--header-primary); caret-color: var(--header-primary); box-sizing: border-box; max-width: 100%; }
 .ssl-search input::placeholder { color: var(--text-muted); opacity: 1; }
@@ -232,7 +240,6 @@ function SelectiveLeaveModal(props: { modalProps: any }) {
         let mfaCode: string | undefined;
         // Simple prompt for 2FA code; users without 2FA can leave blank
         try {
-            // eslint-disable-next-line no-alert
             const code = window
                 .prompt("Enter your 2FA code (leave empty if not enabled):")
                 ?.trim();
@@ -343,7 +350,11 @@ function SelectiveLeaveModal(props: { modalProps: any }) {
     }
 
     return (
-        <ModalRoot {...props.modalProps} size={ModalSize.LARGE}>
+        <ModalRoot
+            {...props.modalProps}
+            size={ModalSize.LARGE}
+            style={{ width: FIXED_MODAL_WIDTH }}
+        >
             <ModalHeader>
                 <Forms.FormTitle
                     tag="h2"
@@ -351,14 +362,17 @@ function SelectiveLeaveModal(props: { modalProps: any }) {
                 >
                     Selective Server Leaver
                 </Forms.FormTitle>
-                <ModalCloseButton onClick={onClose} />
             </ModalHeader>
 
             <ModalContent className="ssl-content">
-                <div className="ssl-root">
+                <div
+                    className="ssl-root"
+                    style={{ width: "100%", maxWidth: FIXED_MODAL_WIDTH }}
+                >
                     {/* Tabs */}
-                    <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                    <div className="ssl-tabs">
                         <Button
+                            className="ssl-tab"
                             size={Button.Sizes.SMALL}
                             color={
                                 activeTab === "joined"
@@ -370,6 +384,7 @@ function SelectiveLeaveModal(props: { modalProps: any }) {
                             Joined Servers
                         </Button>
                         <Button
+                            className="ssl-tab"
                             size={Button.Sizes.SMALL}
                             color={
                                 activeTab === "owned"
@@ -380,7 +395,6 @@ function SelectiveLeaveModal(props: { modalProps: any }) {
                         >
                             Owned Servers
                         </Button>
-                        <div style={{ flex: 1 }} />
                     </div>
 
                     <div
@@ -612,6 +626,7 @@ function SelectiveLeaveModal(props: { modalProps: any }) {
                         display: "flex",
                         alignItems: "center",
                         width: "100%",
+                        maxWidth: FIXED_MODAL_WIDTH,
                         gap: 12,
                     }}
                 >
