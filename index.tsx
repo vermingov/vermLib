@@ -8,7 +8,7 @@
 import ErrorBoundary from "@components/ErrorBoundary";
 import { definePluginSettings } from "@api/Settings";
 import definePlugin, { OptionType } from "@utils/types";
-import { React } from "@webpack/common";
+import { React, showToast, Toasts } from "@webpack/common";
 
 // Sub-plugins
 import FakeDeafen from "./plugins/fakeDeafen";
@@ -276,6 +276,35 @@ function Dashboard() {
 #vermLibDashboard .vl-note {
     font-size: 12px; color: var(--vl-fg-dim); margin-top: 8px;
 }
+#vermLibDashboard .vl-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+#vermLibDashboard .vl-btn {
+    font-size: 12.5px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: var(--background-modifier-accent);
+    color: var(--vl-fg);
+    cursor: pointer;
+}
+#vermLibDashboard .vl-btn.primary {
+    background: var(--brand-500);
+    color: white;
+    border-color: var(--brand-560, var(--brand-500));
+}
+#vermLibDashboard .vl-btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+#vermLibDashboard .vl-status {
+    font-size: 12px;
+    color: var(--vl-fg-dim);
+    align-self: center;
+}
 `;
         document.head.appendChild(style);
         return () => {
@@ -484,6 +513,50 @@ function Dashboard() {
         </div>
     );
 
+    React.useEffect(() => {
+        const check = async () => {
+            try {
+                const res = await fetch(
+                    "https://api.github.com/repos/vermingov/vermLib/commits?per_page=1",
+                    {
+                        headers: { Accept: "application/vnd.github+json" },
+                    },
+                );
+                const data = await res.json();
+                const latest =
+                    Array.isArray(data) && data[0]?.sha
+                        ? String(data[0].sha)
+                        : null;
+                (settings.store as any).vermLibLatestSha = latest;
+                (settings.store as any).vermLibLastChecked = Date.now();
+                const installed =
+                    (settings.store as any).vermLibInstalledSha ?? null;
+
+                // Background checks: only prompt when update is available; say nothing if up to date
+                if (latest && installed && latest !== installed) {
+                    const curShort = String(installed).slice(0, 7);
+                    const newShort = latest.slice(0, 7);
+                    if (
+                        window.confirm(
+                            `Update available for vermLib:\nInstalled: ${curShort}\nLatest: ${newShort}\n\nOpen update?`,
+                        )
+                    ) {
+                        VencordNative?.native?.openExternal?.(
+                            "https://github.com/vermingov/vermLib/archive/refs/heads/main.zip",
+                        );
+                    }
+                }
+            } catch {
+                /* ignore */
+            }
+        };
+
+        // initial on load + every 15 minutes
+        check();
+        const id = setInterval(check, 15 * 60 * 1000);
+        return () => clearInterval(id);
+    }, []);
+
     return (
         <div id="vermLibDashboard">
             <div className="vl-hero">
@@ -501,6 +574,108 @@ function Dashboard() {
                     vermLib Dashboard
                 </h2>
                 <p>Manage all Verm's plugins in one place.</p>
+                <div className="vl-actions">
+                    <button
+                        className="vl-btn primary"
+                        onClick={async () => {
+                            try {
+                                const res = await fetch(
+                                    "https://api.github.com/repos/vermingov/vermLib/commits?per_page=1",
+                                    {
+                                        headers: {
+                                            Accept: "application/vnd.github+json",
+                                        },
+                                    },
+                                );
+                                const data = await res.json();
+                                const latest =
+                                    Array.isArray(data) && data[0]?.sha
+                                        ? String(data[0].sha)
+                                        : null;
+                                (settings.store as any).vermLibLatestSha =
+                                    latest;
+                                (settings.store as any).vermLibLastChecked =
+                                    Date.now();
+                                const installed =
+                                    (settings.store as any)
+                                        .vermLibInstalledSha ?? null;
+                                const curShort = installed
+                                    ? String(installed).slice(0, 7)
+                                    : "none";
+                                const newShort = latest
+                                    ? latest.slice(0, 7)
+                                    : "unknown";
+                                if (
+                                    latest &&
+                                    installed &&
+                                    latest !== installed
+                                ) {
+                                    if (
+                                        window.confirm(
+                                            `Update available for vermLib:\nInstalled: ${curShort}\nLatest: ${newShort}\n\nOpen update?`,
+                                        )
+                                    ) {
+                                        VencordNative?.native?.openExternal?.(
+                                            "https://github.com/vermingov/vermLib/archive/refs/heads/main.zip",
+                                        );
+                                    }
+                                } else if (latest && !installed) {
+                                    if (
+                                        window.confirm(
+                                            `No installed commit recorded.\nLatest: ${newShort}\nMark this as installed?`,
+                                        )
+                                    ) {
+                                        (
+                                            settings.store as any
+                                        ).vermLibInstalledSha = latest;
+                                    }
+                                } else {
+                                    // up to date or unknown
+                                    showToast(
+                                        "No updates found!",
+                                        Toasts.Type.MESSAGE,
+                                    );
+                                }
+                            } catch {
+                                // ignore network errors
+                            }
+                        }}
+                    >
+                        Check for updates
+                    </button>
+                    <button
+                        className="vl-btn"
+                        onClick={() =>
+                            VencordNative?.native?.openExternal?.(
+                                "https://github.com/vermingov/vermLib/archive/refs/heads/main.zip",
+                            )
+                        }
+                    >
+                        Update
+                    </button>
+                    <button
+                        className="vl-btn"
+                        onClick={() =>
+                            VencordNative?.native?.openExternal?.(
+                                "https://github.com/vermingov/vermLib",
+                            )
+                        }
+                    >
+                        Open Repo
+                    </button>
+                    <div className="vl-status">
+                        {(() => {
+                            const s = (settings.store as any) ?? {};
+                            const a = s.vermLibInstalledSha
+                                ? String(s.vermLibInstalledSha).slice(0, 7)
+                                : "none";
+                            const b = s.vermLibLatestSha
+                                ? String(s.vermLibLatestSha).slice(0, 7)
+                                : "unknown";
+                            return `Installed: ${a} • Latest: ${b}`;
+                        })()}
+                    </div>
+                </div>
             </div>
 
             <div className="vl-section-title">Voice</div>
@@ -792,6 +967,52 @@ export default definePlugin({
             }
         } catch {}
 
+        // Background auto-check for updates at startup and every 15 minutes
+        try {
+            const doCheck = async () => {
+                try {
+                    const res = await fetch(
+                        "https://api.github.com/repos/vermingov/vermLib/commits?per_page=1",
+                        {
+                            headers: { Accept: "application/vnd.github+json" },
+                        },
+                    );
+                    const data = await res.json();
+                    const latest =
+                        Array.isArray(data) && data[0]?.sha
+                            ? String(data[0].sha)
+                            : null;
+                    (settings.store as any).vermLibLatestSha = latest;
+                    (settings.store as any).vermLibLastChecked = Date.now();
+                    const installed =
+                        (settings.store as any).vermLibInstalledSha ?? null;
+
+                    if (latest && installed && latest !== installed) {
+                        const curShort = String(installed).slice(0, 7);
+                        const newShort = latest.slice(0, 7);
+                        if (
+                            window.confirm(
+                                `Update available for vermLib:\nInstalled: ${curShort}\nLatest: ${newShort}\n\nOpen update?`,
+                            )
+                        ) {
+                            VencordNative?.native?.openExternal?.(
+                                "https://github.com/vermingov/vermLib/archive/refs/heads/main.zip",
+                            );
+                        }
+                    }
+                } catch {
+                    /* ignore */
+                }
+            };
+            doCheck();
+            (window as any).__vermLibUpdateTimer = setInterval(
+                doCheck,
+                15 * 60 * 1000,
+            );
+        } catch {
+            /* ignore */
+        }
+
         // Start enabled sub-plugins
         if (S.enableFakeDeafen) safeStart("fakeDeafen");
         if (S.enableFollowUser) safeStart("followUser");
@@ -807,5 +1028,10 @@ export default definePlugin({
         (Object.keys(started) as SubKey[]).forEach((k) => {
             if (started[k]) safeStop(k);
         });
+
+        // Clear background update timer
+        try {
+            clearInterval((window as any).__vermLibUpdateTimer);
+        } catch {}
     },
 });
