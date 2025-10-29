@@ -30,8 +30,13 @@ function log(text: string) {
     new Logger("FakeDeafen", "#7b4af7").info(text);
 }
 
-function enableFakeDeafen() {
-    if (faking) return;
+function enableFakeDeafen(): boolean {
+    if (faking) return true;
+
+    // Do nothing if not in a voice channel
+    const chanId = SelectedChannelStore.getVoiceChannelId?.();
+    if (!chanId) return false;
+
     faking = true;
 
     WebSocket.prototype.send = function (data) {
@@ -71,22 +76,16 @@ function enableFakeDeafen() {
 
     // After enabling interception, force deafen+blocked-undeafen to enter fake mode
     try {
-        const chanId = SelectedChannelStore.getVoiceChannelId?.();
         const dispatchToggle = () =>
             FluxDispatcher.dispatch({ type: "AUDIO_TOGGLE_SELF_DEAF" });
 
-        if (!chanId) {
-            showToast(
-                "Fake deafen enabled (join a voice channel to activate)",
-                Toasts.Type.SUCCESS,
-            );
-        } else {
-            // Always perform deafen then blocked-undeafen to ensure server-deaf + local-hear
-            dispatchToggle();
-            setTimeout(dispatchToggle, 50);
-            showToast("Fake deafen enabled", Toasts.Type.SUCCESS);
-        }
+        // Always perform deafen then blocked-undeafen to ensure server-deaf + local-hear
+        dispatchToggle();
+        setTimeout(dispatchToggle, 50);
+        showToast("Fake deafen enabled", Toasts.Type.SUCCESS);
     } catch {}
+
+    return true;
 }
 
 function disableFakeDeafen() {
@@ -166,8 +165,8 @@ function FakeDeafenToggleButton(props: { nameplate?: any }) {
                     disableFakeDeafen();
                     setActive(false);
                 } else {
-                    enableFakeDeafen();
-                    setActive(true);
+                    const enabled = enableFakeDeafen();
+                    if (enabled) setActive(true);
                 }
             }}
         />
