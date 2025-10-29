@@ -10,6 +10,8 @@ import { definePluginSettings } from "@api/Settings";
 import definePlugin, { OptionType } from "@utils/types";
 import { React, showToast, Toasts } from "@webpack/common";
 
+const VERM_LIB_VERSION = "1.0.0";
+
 // Sub-plugins
 import FakeDeafen from "./plugins/fakeDeafen";
 import FollowUser from "./plugins/followUser";
@@ -517,28 +519,16 @@ function Dashboard() {
         const check = async () => {
             try {
                 const res = await fetch(
-                    "https://api.github.com/repos/vermingov/vermLib/commits?per_page=1",
-                    {
-                        headers: { Accept: "application/vnd.github+json" },
-                    },
+                    "https://raw.githubusercontent.com/vermingov/vermLib/main/version.txt",
+                    { cache: "no-cache" as any },
                 );
-                const data = await res.json();
-                const latest =
-                    Array.isArray(data) && data[0]?.sha
-                        ? String(data[0].sha)
-                        : null;
-                (settings.store as any).vermLibLatestSha = latest;
-                (settings.store as any).vermLibLastChecked = Date.now();
-                const installed =
-                    (settings.store as any).vermLibInstalledSha ?? null;
+                const latest = (await res.text()).trim();
 
-                // Background checks: only prompt when update is available; say nothing if up to date
-                if (latest && installed && latest !== installed) {
-                    const curShort = String(installed).slice(0, 7);
-                    const newShort = latest.slice(0, 7);
+                // Background checks: prompt only when update is available; silent if up-to-date
+                if (latest && latest !== VERM_LIB_VERSION) {
                     if (
                         window.confirm(
-                            `Update available for vermLib:\nInstalled: ${curShort}\nLatest: ${newShort}\n\nOpen update?`,
+                            `Update available for vermLib:\nInstalled: ${VERM_LIB_VERSION}\nLatest: ${latest}\n\nOpen update?`,
                         )
                     ) {
                         VencordNative?.native?.openExternal?.(
@@ -580,57 +570,21 @@ function Dashboard() {
                         onClick={async () => {
                             try {
                                 const res = await fetch(
-                                    "https://api.github.com/repos/vermingov/vermLib/commits?per_page=1",
-                                    {
-                                        headers: {
-                                            Accept: "application/vnd.github+json",
-                                        },
-                                    },
+                                    "https://raw.githubusercontent.com/vermingov/vermLib/main/version.txt",
+                                    { cache: "no-cache" as any },
                                 );
-                                const data = await res.json();
-                                const latest =
-                                    Array.isArray(data) && data[0]?.sha
-                                        ? String(data[0].sha)
-                                        : null;
-                                (settings.store as any).vermLibLatestSha =
-                                    latest;
-                                (settings.store as any).vermLibLastChecked =
-                                    Date.now();
-                                const installed =
-                                    (settings.store as any)
-                                        .vermLibInstalledSha ?? null;
-                                const curShort = installed
-                                    ? String(installed).slice(0, 7)
-                                    : "none";
-                                const newShort = latest
-                                    ? latest.slice(0, 7)
-                                    : "unknown";
-                                if (
-                                    latest &&
-                                    installed &&
-                                    latest !== installed
-                                ) {
+                                const latest = (await res.text()).trim();
+                                if (latest && latest !== VERM_LIB_VERSION) {
                                     if (
                                         window.confirm(
-                                            `Update available for vermLib:\nInstalled: ${curShort}\nLatest: ${newShort}\n\nOpen update?`,
+                                            `Update available for vermLib:\nInstalled: ${VERM_LIB_VERSION}\nLatest: ${latest}\n\nOpen update?`,
                                         )
                                     ) {
                                         VencordNative?.native?.openExternal?.(
                                             "https://github.com/vermingov/vermLib/archive/refs/heads/main.zip",
                                         );
                                     }
-                                } else if (latest && !installed) {
-                                    if (
-                                        window.confirm(
-                                            `No installed commit recorded.\nLatest: ${newShort}\nMark this as installed?`,
-                                        )
-                                    ) {
-                                        (
-                                            settings.store as any
-                                        ).vermLibInstalledSha = latest;
-                                    }
                                 } else {
-                                    // up to date or unknown
                                     showToast(
                                         "No updates found!",
                                         Toasts.Type.MESSAGE,
@@ -663,18 +617,7 @@ function Dashboard() {
                     >
                         Open Repo
                     </button>
-                    <div className="vl-status">
-                        {(() => {
-                            const s = (settings.store as any) ?? {};
-                            const a = s.vermLibInstalledSha
-                                ? String(s.vermLibInstalledSha).slice(0, 7)
-                                : "none";
-                            const b = s.vermLibLatestSha
-                                ? String(s.vermLibLatestSha).slice(0, 7)
-                                : "unknown";
-                            return `Installed: ${a} • Latest: ${b}`;
-                        })()}
-                    </div>
+                    <div className="vl-status">Version: {VERM_LIB_VERSION}</div>
                 </div>
             </div>
 
@@ -972,27 +915,15 @@ export default definePlugin({
             const doCheck = async () => {
                 try {
                     const res = await fetch(
-                        "https://api.github.com/repos/vermingov/vermLib/commits?per_page=1",
-                        {
-                            headers: { Accept: "application/vnd.github+json" },
-                        },
+                        "https://raw.githubusercontent.com/vermingov/vermLib/main/version.txt",
+                        { cache: "no-cache" as any },
                     );
-                    const data = await res.json();
-                    const latest =
-                        Array.isArray(data) && data[0]?.sha
-                            ? String(data[0].sha)
-                            : null;
-                    (settings.store as any).vermLibLatestSha = latest;
-                    (settings.store as any).vermLibLastChecked = Date.now();
-                    const installed =
-                        (settings.store as any).vermLibInstalledSha ?? null;
+                    const latest = (await res.text()).trim();
 
-                    if (latest && installed && latest !== installed) {
-                        const curShort = String(installed).slice(0, 7);
-                        const newShort = latest.slice(0, 7);
+                    if (latest && latest !== VERM_LIB_VERSION) {
                         if (
                             window.confirm(
-                                `Update available for vermLib:\nInstalled: ${curShort}\nLatest: ${newShort}\n\nOpen update?`,
+                                `Update available for vermLib:\nInstalled: ${VERM_LIB_VERSION}\nLatest: ${latest}\n\nOpen update?`,
                             )
                         ) {
                             VencordNative?.native?.openExternal?.(
