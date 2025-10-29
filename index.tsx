@@ -871,7 +871,7 @@ function FDButton(props: any) {
 
 export default definePlugin({
     name: "vermLib",
-    description: "Only the best of the best.",
+    description: "Only the best of the best plugins.",
     authors: [{ name: "Vermin", id: 1287307742805229608n }],
 
     settings,
