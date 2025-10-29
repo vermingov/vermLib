@@ -10,7 +10,7 @@ import { definePluginSettings } from "@api/Settings";
 import definePlugin, { OptionType } from "@utils/types";
 import { React, showToast, Toasts } from "@webpack/common";
 
-const VERM_LIB_VERSION = "1.0.0";
+const VERM_LIB_VERSION = "1.0.1";
 
 // Sub-plugins
 import FakeDeafen from "./plugins/fakeDeafen";
