@@ -19,6 +19,7 @@ import GoXLRCensorIndicator from "./plugins/goxlrCensorIndicator";
 import HideMicErrorNotice from "./plugins/hideMicErrorNotice";
 import RawMic from "./plugins/rawMic";
 import VCReturn from "./plugins/vcReturn";
+import CloneServerProfile from "./plugins/cloneServerProfile";
 
 type SubKey =
     | "fakeDeafen"
@@ -28,7 +29,8 @@ type SubKey =
     | "rawMic"
     | "vcReturn"
     | "awesomeUser"
-    | "selectiveServerLeaver";
+    | "selectiveServerLeaver"
+    | "cloneServerProfile";
 
 type SubPlugin = {
     name?: string;
@@ -49,6 +51,7 @@ const subs: Record<SubKey, SubPlugin> = {
     hideMicErrorNotice: HideMicErrorNotice as unknown as SubPlugin,
     rawMic: RawMic as unknown as SubPlugin,
     vcReturn: VCReturn as unknown as SubPlugin,
+    cloneServerProfile: CloneServerProfile as unknown as SubPlugin,
     awesomeUser: (require("./plugins/awesomeUser") as any).default as SubPlugin,
     selectiveServerLeaver: (require("./plugins/selectiveServerLeaver") as any)
         .default as SubPlugin,
@@ -63,6 +66,7 @@ const started: Record<SubKey, boolean> = {
     vcReturn: false,
     awesomeUser: false,
     selectiveServerLeaver: false,
+    cloneServerProfile: false,
 };
 
 function safeStart(key: SubKey) {
@@ -99,6 +103,7 @@ type PrivateState = {
     enableAwesomeUser: boolean;
     enableSelectiveServerLeaver: boolean;
     enableNeverPausePreviews: boolean;
+    enableCloneServerProfile: boolean;
 };
 
 const DEFAULTS: PrivateState = {
@@ -113,6 +118,7 @@ const DEFAULTS: PrivateState = {
     enableAwesomeUser: true,
     enableSelectiveServerLeaver: false,
     enableNeverPausePreviews: false,
+    enableCloneServerProfile: false,
 };
 
 // Dashboard component (the only visible setting entry)
@@ -343,6 +349,8 @@ function Dashboard() {
         enableSelectiveServerLeaver:
             sInit.enableSelectiveServerLeaver ??
             DEFAULTS.enableSelectiveServerLeaver,
+        enableCloneServerProfile:
+            sInit.enableCloneServerProfile ?? DEFAULTS.enableCloneServerProfile,
         enableNeverPausePreviews:
             sInit.enableNeverPausePreviews ?? DEFAULTS.enableNeverPausePreviews,
     });
@@ -418,6 +426,11 @@ function Dashboard() {
                     ? safeStart("selectiveServerLeaver")
                     : safeStop("selectiveServerLeaver");
                 break;
+            case "enableCloneServerProfile":
+                value
+                    ? safeStart("cloneServerProfile")
+                    : safeStop("cloneServerProfile");
+                break;
             case "enableNeverPausePreviews":
                 try {
                     if (
@@ -466,6 +479,8 @@ function Dashboard() {
             enableSelectiveServerLeaver:
                 s.enableSelectiveServerLeaver ??
                 prev.enableSelectiveServerLeaver,
+            enableCloneServerProfile:
+                s.enableCloneServerProfile ?? prev.enableCloneServerProfile,
             enableNeverPausePreviews:
                 s.enableNeverPausePreviews ?? prev.enableNeverPausePreviews,
         }));
@@ -485,6 +500,7 @@ function Dashboard() {
         s.enableVCReturn = state.enableVCReturn;
         s.enableAwesomeUser = state.enableAwesomeUser;
         s.enableSelectiveServerLeaver = state.enableSelectiveServerLeaver;
+        s.enableCloneServerProfile = state.enableCloneServerProfile;
         s.enableNeverPausePreviews = state.enableNeverPausePreviews;
     }, [
         state.enableFakeDeafen,
@@ -497,6 +513,7 @@ function Dashboard() {
         state.enableVCReturn,
         state.enableAwesomeUser,
         state.enableSelectiveServerLeaver,
+        state.enableCloneServerProfile,
         state.enableNeverPausePreviews,
     ]);
 
@@ -819,6 +836,21 @@ function Dashboard() {
                     }
                     tag="Social"
                 />
+                <Card
+                    title="Clone Server Profile"
+                    description="Right-click a member to clone their server profile (nickname, server avatar, server banner) into yours in this server."
+                    enabled={state.enableCloneServerProfile}
+                    right={
+                        <Switch
+                            checked={state.enableCloneServerProfile}
+                            onChange={(v) =>
+                                update("enableCloneServerProfile", v)
+                            }
+                            ariaLabel="Enable Clone Server Profile"
+                        />
+                    }
+                    tag="Social"
+                />
             </div>
         </div>
     );
@@ -844,7 +876,7 @@ function FDButton(props: any) {
 
 export default definePlugin({
     name: "vermLib",
-    description: "Only the best of the best plugins.",
+    description: "The brain, heart, and soul of Vermcord.",
     authors: [
         { name: "Vermin", id: 1287307742805229608n },
         { name: "Kravle", id: 1175153197640331284n },
@@ -891,6 +923,16 @@ export default definePlugin({
             if (s.enableFollowUser) {
                 try {
                     subs.followUser?.contextMenus?.["user-context"]?.(
+                        children,
+                        args,
+                    );
+                } catch {
+                    // ignore
+                }
+            }
+            if (s.enableCloneServerProfile) {
+                try {
+                    subs.cloneServerProfile?.contextMenus?.["user-context"]?.(
                         children,
                         args,
                     );
@@ -986,6 +1028,7 @@ export default definePlugin({
         if (S.enableVCReturn) safeStart("vcReturn");
         if (S.enableAwesomeUser) safeStart("awesomeUser");
         if (S.enableSelectiveServerLeaver) safeStart("selectiveServerLeaver");
+        if (S.enableCloneServerProfile) safeStart("cloneServerProfile");
     },
 
     stop() {
