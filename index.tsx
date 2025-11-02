@@ -10,7 +10,7 @@ import { definePluginSettings } from "@api/Settings";
 import definePlugin, { OptionType } from "@utils/types";
 import { React, showToast, Toasts } from "@webpack/common";
 
-const VERM_LIB_VERSION = "1.0.1";
+const VERM_LIB_VERSION = "1.0.2";
 
 // Sub-plugins
 import FakeDeafen from "./plugins/fakeDeafen";
@@ -27,6 +27,7 @@ type SubKey =
     | "hideMicErrorNotice"
     | "rawMic"
     | "vcReturn"
+    | "awesomeUser"
     | "selectiveServerLeaver";
 
 type SubPlugin = {
@@ -48,6 +49,7 @@ const subs: Record<SubKey, SubPlugin> = {
     hideMicErrorNotice: HideMicErrorNotice as unknown as SubPlugin,
     rawMic: RawMic as unknown as SubPlugin,
     vcReturn: VCReturn as unknown as SubPlugin,
+    awesomeUser: (require("./plugins/awesomeUser") as any).default as SubPlugin,
     selectiveServerLeaver: (require("./plugins/selectiveServerLeaver") as any)
         .default as SubPlugin,
 };
@@ -59,6 +61,7 @@ const started: Record<SubKey, boolean> = {
     hideMicErrorNotice: false,
     rawMic: false,
     vcReturn: false,
+    awesomeUser: false,
     selectiveServerLeaver: false,
 };
 
@@ -93,6 +96,7 @@ type PrivateState = {
     enableHideMicErrorNotice: boolean;
     enableRawMic: boolean;
     enableVCReturn: boolean;
+    enableAwesomeUser: boolean;
     enableSelectiveServerLeaver: boolean;
     enableNeverPausePreviews: boolean;
 };
@@ -106,6 +110,7 @@ const DEFAULTS: PrivateState = {
     enableHideMicErrorNotice: false,
     enableRawMic: false,
     enableVCReturn: false,
+    enableAwesomeUser: true,
     enableSelectiveServerLeaver: false,
     enableNeverPausePreviews: false,
 };
@@ -333,6 +338,8 @@ function Dashboard() {
             sInit.enableHideMicErrorNotice ?? DEFAULTS.enableHideMicErrorNotice,
         enableRawMic: sInit.enableRawMic ?? DEFAULTS.enableRawMic,
         enableVCReturn: sInit.enableVCReturn ?? DEFAULTS.enableVCReturn,
+        enableAwesomeUser:
+            sInit.enableAwesomeUser ?? DEFAULTS.enableAwesomeUser,
         enableSelectiveServerLeaver:
             sInit.enableSelectiveServerLeaver ??
             DEFAULTS.enableSelectiveServerLeaver,
@@ -389,6 +396,23 @@ function Dashboard() {
             case "enableVCReturn":
                 value ? safeStart("vcReturn") : safeStop("vcReturn");
                 break;
+            case "enableAwesomeUser":
+                if (value) {
+                    try {
+                        if (
+                            window.confirm(
+                                "AwesomeUser requires a restart to take effect. Restart now?",
+                            )
+                        )
+                            location.reload();
+                    } catch {}
+                } else {
+                    try {
+                        (subs.awesomeUser as any)?.removePronouns?.();
+                    } catch {}
+                    safeStop("awesomeUser");
+                }
+                break;
             case "enableSelectiveServerLeaver":
                 value
                     ? safeStart("selectiveServerLeaver")
@@ -438,6 +462,7 @@ function Dashboard() {
                 s.enableHideMicErrorNotice ?? prev.enableHideMicErrorNotice,
             enableRawMic: s.enableRawMic ?? prev.enableRawMic,
             enableVCReturn: s.enableVCReturn ?? prev.enableVCReturn,
+            enableAwesomeUser: s.enableAwesomeUser ?? prev.enableAwesomeUser,
             enableSelectiveServerLeaver:
                 s.enableSelectiveServerLeaver ??
                 prev.enableSelectiveServerLeaver,
@@ -458,6 +483,7 @@ function Dashboard() {
         s.enableHideMicErrorNotice = state.enableHideMicErrorNotice;
         s.enableRawMic = state.enableRawMic;
         s.enableVCReturn = state.enableVCReturn;
+        s.enableAwesomeUser = state.enableAwesomeUser;
         s.enableSelectiveServerLeaver = state.enableSelectiveServerLeaver;
         s.enableNeverPausePreviews = state.enableNeverPausePreviews;
     }, [
@@ -469,6 +495,7 @@ function Dashboard() {
         state.enableHideMicErrorNotice,
         state.enableRawMic,
         state.enableVCReturn,
+        state.enableAwesomeUser,
         state.enableSelectiveServerLeaver,
         state.enableNeverPausePreviews,
     ]);
@@ -694,7 +721,7 @@ function Dashboard() {
                 />
                 <Card
                     title="Selective Server Leaver"
-                    description="Adds a button under Discover to leave multiple servers at once."
+                    description="Allows you to leave multiple servers at once."
                     enabled={state.enableSelectiveServerLeaver}
                     right={
                         <Switch
@@ -779,6 +806,19 @@ function Dashboard() {
                         />
                     </div>
                 </Card>
+                <Card
+                    title="AwesomeUser"
+                    description="Identify vermLib users: appends a hidden beacon for vermLib users and shows (VermLib) in profiles."
+                    enabled={state.enableAwesomeUser}
+                    right={
+                        <Switch
+                            checked={state.enableAwesomeUser}
+                            onChange={(v) => update("enableAwesomeUser", v)}
+                            ariaLabel="Enable AwesomeUser"
+                        />
+                    }
+                    tag="Social"
+                />
             </div>
         </div>
     );
@@ -941,6 +981,7 @@ export default definePlugin({
         if (S.enableHideMicErrorNotice) safeStart("hideMicErrorNotice");
         if (S.enableRawMic) safeStart("rawMic");
         if (S.enableVCReturn) safeStart("vcReturn");
+        if (S.enableAwesomeUser) safeStart("awesomeUser");
         if (S.enableSelectiveServerLeaver) safeStart("selectiveServerLeaver");
     },
 
